@@ -1,116 +1,117 @@
 #!/usr/bin/env python
+# Plot to demonstrate meaning of residual PDF plots
+# Plot histogram of residuals, 
+# and 2 Gaussians to show model and residual distribution
 
-
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import norm
 from matplotlib import colors
 
-from scipy.stats import norm
-import sys
-
-def mygauss(x,mean,sigma):
-#    scale = 1./(sigma*np.sqrt(2*np.pi))
-#    g = scale*np.exp(-0.5*((x-mean)/sigma)**2)
-    scale = 1./(np.sqrt(2*np.pi*sigma**2))
-    g = scale*np.exp(-1*(x-mean)**2/(2*sigma**2))
-    return g
-    
-
-modelname = sys.argv[1]
-T_ex = float(sys.argv[2])
-
-x = np.linspace(-2,2,100)
-
-stdmarker = {'marker':'|', 'ms':'20', 'mew':2, 'linestyle':'None'}
-avgmarker = {'marker':'o', 'ms':'10', 'mec':'k', 'mew':2, 'linestyle':'None'}
-
 ############################
-# Read input file
-pdffile='{0}_PDF.out'.format(modelname)
-sigmafile='{0}_sigma.out'.format(modelname)
-#T_ex = 0.1 
-#T_ex = 1.0 
-# Find PDF 
-f, T_orig, logres_orig, pdf_orig = np.loadtxt(pdffile, unpack=True)
+# Check for correct # of args
+if len(sys.argv) != 3:
+    print('Usage: resdemo.py MODEL period')
+
+# Read input files
+try: 
+    modelname = sys.argv[1]
+    pdffile='{0}_PDF.out'.format(modelname)
+    sigmafile='{0}_sigma.out'.format(modelname)
+    f, T_orig, logres_orig, pdf_orig = np.loadtxt(pdffile, unpack=True)
+    T_std, meanres1, stdres1, stdpred1 = np.loadtxt(sigmafile, unpack=True)
+except Exception as e:
+    print('Error: ',e)
+    print('MODEL should be the name of a ground motion model')
+    print('with MODEL_PDF.out and MODEL_sigma.out files in cwd')
+    sys.exit()
+   
+# Set specified period T_ex
+# if not given, print a list of periods to choose
+try:
+    if len(sys.argv) != 3:
+        print('choose from periods found in {0}_PDF.out:')
+        print(np.unique(T_orig))
+        sys.exit()
+    T_ex = float(sys.argv[2])
+except Exception as e:
+    print(e)
+    sys.exit()
+
+# Pull values at period T_ex out of *_PDF.out file 
 iwhere, = np.where(T_orig == T_ex)
 T = T_orig[iwhere]
-print(T)
 logres = logres_orig[iwhere]
 pdf = pdf_orig[iwhere]
-#pdf = 0.25*norm(loc=0.076073, scale=1.04046/2).pdf(logres)
-print(sum(pdf))
+print('sum of all bins at T={0} (should be 1.0):'.format(T_ex), sum(pdf))
 
-# Find mean and sigma
-T_std, meanres1, stdres1, stdpred1 = np.loadtxt(sigmafile, unpack=True)
+# Pull mean and sigmas at period T_ex out of *_sigma.out file
 iwhere, = np.where(T_std == T_ex)
 meanres = meanres1[iwhere]
 stdres = stdres1[iwhere]
 stdpred = stdpred1[iwhere]
-print(meanres, stdres, stdpred)
+print('mean residual: {0}'.format(meanres))
+print('std of observed residuals: {0}'.format(stdres))
+print('std of model predictions:  {0}'.format(stdpred))
+
 ############################
-scale=0.25
-#scale=1
-#scale=1./0.25
+# Set some plot parameters
+stdmarker = {'marker':'|', 'ms':'20', 'mew':2, 'linestyle':'None'}
+avgmarker = {'marker':'o', 'ms':'10', 'mec':'k', 'mew':2, 'linestyle':'None'}
 
-# Plot model
-# mean is always 0, sigma varies
-#stdpred = 0.4
-#w_model = norm(loc=0, scale=stdpred)
-#w_model = mygauss(x,0,stdpred)
+############################
+# Plot Gaussians showing model predictions and observed residuals
+# for model predictions, mean is always 0; sigma varies
+scale=0.25 # why??
 
-#plt.plot(x,w_model, label='model', color='r', lw=3)
-#plt.plot(-1*stdpred,w_model(-1*stdpred), **stdmarker, mec='r')
-#plt.plot(stdpred,w_model(stdpred), **stdmarker, mec='r')
+x = np.linspace(-2,2,100)
 
 w_model = norm(loc=0, scale=stdpred/2)
 plt.plot(x,scale*w_model.pdf(x), label=modelname, color='r', lw=1)
-plt.plot(-1*stdpred,scale*w_model.pdf(-1*stdpred), **stdmarker, mec='r', label=r'Predicted 1$\sigma$')
+plt.plot(-1*stdpred,scale*w_model.pdf(-1*stdpred), **stdmarker, 
+         mec='r', label=r'Predicted 1$\sigma$')
 plt.plot(stdpred,scale*w_model.pdf(stdpred), **stdmarker, mec='r')
 
-
-# Plot data
+############################
+# Plot histogram of observed residuals
 w_res = norm(loc=meanres, scale=stdres/2)
 
 plt.plot(x,scale*w_res.pdf(x), label='data', color='grey', lw=1)
-plt.plot(meanres-stdres,scale*w_res.pdf(meanres-stdres), **stdmarker, mec='grey', label=r'Residual 1$\sigma$')
-plt.plot(meanres+stdres,scale*w_res.pdf(meanres-stdres), **stdmarker, mec='grey')
-plt.plot(meanres,scale*w_res.pdf(meanres), **avgmarker, mfc='None', label='Mean residual')
+plt.plot(meanres-stdres,scale*w_res.pdf(meanres-stdres), 
+         **stdmarker, mec='grey', label=r'Residual 1$\sigma$')
+plt.plot(meanres+stdres,scale*w_res.pdf(meanres-stdres), 
+         **stdmarker, mec='grey')
+plt.plot(meanres,scale*w_res.pdf(meanres), 
+         **avgmarker, mfc='None', label='Mean residual')
 plt.plot(meanres,scale*w_res.pdf(meanres), **avgmarker, mfc='w', alpha=0.3)
-
 
 N, bins, patches = plt.hist(logres, len(logres), weights=pdf, zorder=0)
 fracs = N #/ N.max()
 
-print('---pdf---')
-print(pdf)
-print('---pdf---')
-#print(N)
-sumN = 0.
-for i in range(len(N)):
-    sumN += N[i]
-    print(i, bins[i], N[i], sumN)
+# uncomment for debugging
+#print('---pdf---')
+#for i in range(len(pdf)):
+#    print(logres[i], pdf[i])
+#print('---pdf---')
 
+# Get fancy: fill each histogram bin with the same color used 
+# in residual PDF colorbar (which is normalized btw 0 and 0.35)
 # we need to normalize the data to 0..1 for the full range of the colormap
-norm = colors.Normalize(0, 0.35) #fracs.min(), fracs.max())
-#norm = colors.Normalize(0, 1)
-
+norm = colors.Normalize(0, 0.35) 
 for thisfrac, thispatch in zip(fracs, patches):
-#    color = plt.cm.bone_r(set_clim)
     color = plt.cm.bone_r(norm(thisfrac))
     thispatch.set_facecolor(color)
     thispatch.set_zorder(0)
 
-
-
-
-# Finish up
+############################
+# Add title, labels, and legend, set limits, save to png and eps
 plt.xlim(-2,2)
 plt.xlabel('Residual log10(obs)-log10(pred)', fontsize='large')
 plt.ylim(0,.5)
 plt.plot([0,0],[0,1], 'r--', lw=3)
-plt.title('T={0} s'.format(T_ex))
+plt.title('{0}, T={1} s'.format(modelname, T_ex))
 plt.legend(numpoints=1)
-#plt.savefig('meh.png')
 plt.savefig('LLH_{0}_{1}.png'.format(modelname,T_ex))
 plt.savefig('LLH_{0}_{1}.eps'.format(modelname,T_ex))
 print('saved', 'LLH_{0}_{1}.png'.format(modelname,T_ex))
