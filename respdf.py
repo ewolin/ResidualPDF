@@ -39,8 +39,7 @@ from gmmpdfutils import xbinedges
 # gettin fancy with argparse description and help messages
 # RawTextHelpFormatter lets us have line breaks in help text
 desc='''Plot residual pdfs for ground motion model MODEL'''
-epilog='''Plots will be named MODELpdf.[png,eps,pdf]
-Will also write MODEL_mean.txt for use with resmean.py'''
+epilog='''Plots will be named MODELpdf.[png,eps,pdf]'''
 parser = argparse.ArgumentParser(description=desc,
                                  epilog=epilog,
                              formatter_class=argparse.RawTextHelpFormatter)
@@ -57,8 +56,10 @@ parser.add_argument('-v', '--verbose', action='store_true', default=False,
                     help='verbose mode for debugging')
 args = parser.parse_args()
 modelname = args.model
-print('Plotting residuals vs. period for {0}'.format(modelname))
+pdffile = modelname+'_PDF.out'
+sigmafile = modelname+'_sigma.out'
 
+print('Plotting residuals vs. period for {0}'.format(modelname))
 if args.verbose:
     print('Expecting to find {0} and {1} in cwd'.format(pdffile, sigmafile))
 
@@ -68,7 +69,6 @@ if args.verbose:
 # Separate PGA from PSA
 # and for PSA, convert T to log10(T) 
 # (use log(pd) bc hist2d does NOT look good if log-scaled after plotting)
-pdffile = modelname+'_PDF.out'
 f, T_orig, logres_orig, pdf_orig = np.loadtxt(pdffile, unpack=True)
 
 # PGA is at -1 so let's separate those from psa before we try to do log(T)
@@ -79,8 +79,8 @@ T_pga = T_orig[i_pga]
 logres_pga = logres_orig[i_pga]
 pdf_pga = pdf_orig[i_pga]
 
-#i_psa, = np.where(T_orig!=-1) 
-# actually, let's pick off unwanted short periods (0.0333 and 0.04 s)
+# use --tmin flag to ignore unwanted short periods 
+# e.g. 0.0333 and 0.04 s for Atkinson 2010 database
 i_psa, = np.where(T_orig>args.tmin) 
 
 # Define T, logres, and PDF for psa
@@ -92,19 +92,15 @@ T = np.log10(T)
 # Find unique values of period and log-residuals for histograms
 Ts = np.unique(T)
 lrs = np.unique(logres)
-# find min and max values here...
 
 ############################
 # Read mean, std of residuals, std of predictions from MODEL_sigma.out
-sigmafile = modelname+'_sigma.out'
 T_std, meanres, stdres, stdpred = np.loadtxt(sigmafile, unpack=True)
 i_psa, = np.where(T_std>args.tmin) 
-#i_psa, = np.where(T_std!=-1) 
 T_std[0] = 0.000001
 T_std = np.log10(T_std)
 T_std[0] = -1
 
-print(i_psa, T_std[i_psa])
 T_std_psa = T_std[i_psa]
 meanres_psa = meanres[i_psa]
 stdres_psa = stdres[i_psa]
@@ -115,8 +111,10 @@ stdpred_psa = stdpred[i_psa]
 xbins = xbinedges(Ts)
 ybins = xbinedges(lrs)
 if args.verbose:
-    print('xbins, len(xbins), len(Ts):')
-    print(xbins, len(xbins), len(Ts))
+    print('len(Ts):', len(Ts))
+    print('len(xbins):', len(xbins))
+    print('xbins:')
+    print(xbins)
 
 ############################
 # Quick and dirty figure
@@ -164,7 +162,7 @@ c2, x2, y2, im2 = ax_pga.hist2d(T_pga, logres_pga, weights=pdf_pga,
 
 #####
 # Plot line at zero to highlight positive vs negative residuals
-# new! use stroke (instead of plotting 2 lines)
+# Use patheffects.Stroke instead of plotting 2 lines
 # not sure if this is any easier than just plotting 2 lines though :P
 stroke=[pe.Stroke(linewidth=3, foreground='w'), pe.Normal()]
 modstdstyle={'lw' : 1, 'color' : 'red', 'path_effects' : stroke, 
@@ -175,36 +173,18 @@ ax_pga.plot(ax_pga.get_xlim(),[0,0], **modstdstyle)
 #####
 # Add PGA label to PGA subplot
 # transAxes uses axis coordinates instead of plot coordinates
-#ax_pga.text(-1, -2.1, 'PGA', ha='center', va='top')
+# (easier to work with in case we change x or y lim)
 ax_pga.text(0.5, -0.02, 'PGA', ha='center', va='top',
             transform=ax_pga.transAxes)
-
-#####
-# Calculate average and standard deviation from PDF, for each period
-#avgs = np.empty(len(Ts))
-#stds = np.empty(len(Ts))
-#for i,Ti in enumerate(Ts):
-#    iwhere, = np.where(T==Ti)
-#    if verbose:
-#        print('Ti:', Ti)
-#        print('iwhere:', iwhere)
-#    avgres = np.average(logres[iwhere], weights=pdf[iwhere])
-#    var = np.average((logres[iwhere]-avgres)**2, weights=pdf[iwhere])
-#    std = np.sqrt(var)
-#    stds[i] = std
-#    avgs[i] = avgres
-#    if verbose:
-#        print('Ti, avgres, std:')
-#        print(Ti,avgres, std)
 
 #####
 # Plot average and standard deviation
 # remember:
 # marker = symbol to use (circle, triangle, etc)
 # ms = markersize (in pts)
-# mec = markeredgecolor (fill color, -G in GMT)
-# mfc = markerfacecolor (stroke color, half of -W in GMT)
-# mew = markeredgewidth (weight of edge stroke, other half of -W in GMT)
+# mfc = markerfacecolor (fill color, -G in GMT)
+# mec = markeredgecolor (stroke color, -W in GMT)
+# mew = markeredgewidth (weight of edge stroke, -W in GMT)
 # Set up line and marker styles
 stroke2=[pe.Stroke(linewidth=4, foreground='w'), pe.Normal()]
 lineeffects = {'lw':2, 'color':'black', 'path_effects':stroke2, 
@@ -231,35 +211,32 @@ ax_pga.plot(T_std[0],meanres[0], **avgmarker, mfc='None', label='mean')
 bin_repeat = np.repeat(xbins,3)[1:-1]
 avg_repeat = np.append(np.repeat(meanres_psa,3), meanres_psa[-1])
 std_repeat = np.append(np.repeat(stdres_psa,3), stdres_psa[-1])
-dum = np.append(np.repeat(10**T_std_psa,3), 10**T_std_psa[-1])
-std_plus = np.zeros(shape=len(avg_repeat))
-std_minus = np.zeros(shape=len(avg_repeat))
-for i in range(len(avg_repeat)):
-    print(dum[i], avg_repeat[i], std_repeat[i], 
-          avg_repeat[i]+std_repeat[i], avg_repeat[i]-std_repeat[i])
-    std_plus[i] = avg_repeat[i]+std_repeat[i]
-    std_minus[i] = avg_repeat[i]-std_repeat[i]
-#    ax_logT.plot(bin_repeat[i], std_plus[i], 'bx')
-#    ax_logT.plot(bin_repeat[i], std_minus[i], 'bx')
+std_plus = avg_repeat+std_repeat
+std_minus = avg_repeat-std_repeat
+
 if args.verbose:
     print('len of xbins, meanres_psa, stdres_psa:')
     print(len(xbins), len(meanres_psa), len(stdres_psa))
     print('len of repeated xbins, repeated means, repeated stds:')
     print(len(bin_repeat), len(avg_repeat), len(std_repeat))
+    print('T_std:')
     print(T_std)
 
-# Check whether list of T is given in increasing or decreasing order in sigma file
+# Check order of T in sigma file
 # If listed in decreasing order, reverse the order of the bins for plotting
 if np.any(np.diff(T_std_psa)<0):
     bin_repeat = bin_repeat[::-1]
     
-ax_logT.plot(bin_repeat, std_plus, **lineeffects, label='residual std', zorder=8)
+ax_logT.plot(bin_repeat, std_plus, **lineeffects, label='residual std', 
+             zorder=8)
 ax_logT.plot(bin_repeat, std_minus, **lineeffects, zorder=8)
 
-# Now plot stds for model predictions...again repeat vals so we plot across the whole bin
+# Now plot stds for model predictions...
+# again, repeat vals so we plot across the whole bin
 std_repeat = np.append(np.repeat(stdpred_psa,3), stdpred_psa[-1])
 
-ax_logT.plot(bin_repeat, std_repeat, **lineeffects2, label='predicted std', zorder=3) 
+ax_logT.plot(bin_repeat, std_repeat, **lineeffects2, label='predicted std',
+             zorder=3) 
 ax_logT.plot(bin_repeat, -1*std_repeat, **lineeffects2, zorder=3)
 
 # Plot stds of residuals and model predictions for PGA
@@ -280,7 +257,8 @@ ax_logT.xaxis.set_visible(False)
 ax_logT.tick_params(axis='y', labelleft=False)
 ylabel = r'Residual log$_{10}$(obs)-log$_{10}$(pred)'
 ax_pga.set_ylabel(ylabel, fontsize='large')
-ax_pga.tick_params(axis='y', labelsize='large', direction='in', which='both')
+ax_pga.tick_params(axis='y', labelsize='large', direction='in', 
+                   which='both')
 ax_pga.xaxis.set_visible(False)
 ax_logT.set_title(modelname, fontsize='xx-large', x=0.5, y=0.9)
 
@@ -309,10 +287,12 @@ ax_pga.set_ylim(-2,2)
 
 #####
 # Draw colorbar 
-# need to pass both lin and log axes to the 'ax' keyword arg to get proper colorbar placement
+# need to pass both lin and log axes to the 'ax' keyword arg 
+# to get proper colorbar placement
 #fig.colorbar(image, ax=[ax_logT,ax_Tlog], label='Probability')
 
-# Turn off colorbar by commenting out line below and uncommenting set_visible command
+# Turn off colorbar by commenting out line below 
+# and uncommenting set_visible command
 #fig.colorbar(image, cax=ax_cb, label='Probability')
 ax_cb.set_visible(False)
 
@@ -322,9 +302,9 @@ ax_cb.set_visible(False)
 # if you want to trim off the whitespace,
 # use this bash command after processing:
 # convert -trim pdf.png meh.png
-fig.savefig(modelname+'pdf.eps')
-print('residual histogram saved to {0}pdf.eps'.format(modelname))
-fig.savefig(modelname+'pdf.png')
+#fig.savefig(modelname+'pdf.eps')
+#print('residual histogram saved to {0}pdf.eps'.format(modelname))
+#fig.savefig(modelname+'pdf.png')
 fig.savefig(modelname+'pdf.pdf')
 print('residual histogram saved to {0}pdf.png'.format(modelname))
 #plt.show()
