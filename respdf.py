@@ -4,8 +4,9 @@
 #--------------------
 # Plot PDF of ground motion residuals: 
 # x-axis = period
-# NOTE: we convert to log(period) after reading for better behavior in hist2d, 
-#       then overlay a semilog x axis
+# NOTE: input values are converted to log(period) after reading 
+# for better behavior with hist2d, and plotted on a linear x-axis
+# then we overlay a semilog x axis on the plot at the end
 # y-axis = residual (log(obs)-log(pred))
 # color = probability 
 #
@@ -23,6 +24,7 @@
 # Imports
 import sys
 import numpy as np
+import argparse
 
 from matplotlib import ticker
 import matplotlib.gridspec as gridspec
@@ -32,30 +34,32 @@ import matplotlib.patheffects as pe
 #import gmmpdfutils
 
 ############################
-# Usage and verbosity
-if len(sys.argv) < 2:
-#    print('Usage: respdf.py inputfile')
-    print('Usage: {0} MODEL'.format(sys.argv[0]))
-    print('Requires 2 input files in working directory:')
-    print('MODEL_PDF.out must be a list of: f, T, logresidual, pdf')
-    print('MODEL_sigma.out must be a list of: T, mean logresidual, sigma_obs, sigma_pred')
+# Arguments and usage
+# gettin fancy with argparse description and help messages
+# RawTextHelpFormatter lets us have line breaks in help text
+desc='''Plot residual pdfs for ground motion model MODEL'''
+epilog='''Plots will be named MODELpdf.[png,eps,pdf]
+Will also write MODEL_mean.txt for use with resmean.py'''
+parser = argparse.ArgumentParser(description=desc,
+                                 epilog=epilog,
+                             formatter_class=argparse.RawTextHelpFormatter)
+modelhelp = '''Name of model.
+Script expects to find 2 input files in working directory:  
+MODEL_PDF.out: f, T, logresidual, pdf 
+MODEL_sigma.out: T, mean logresidual, sigma_obs, sigma_pred
+Expects PGA residuals to be stored at T=-1'''
 
-    print('Plots will be named Modelpdf.[png,eps]')
-    print('Will also write Model_mean.txt for use with resmean.py')
-    print('use -v for debugging output')
-    sys.exit()
-
-if '-v' in sys.argv:
-    verbose = True
-else:
-    verbose = False
-
-modelname = sys.argv[1]
-pdffile = modelname+'_PDF.out'
-sigmafile = modelname+'_sigma.out'
+parser.add_argument('model', help=modelhelp)
+parser.add_argument('--tmin', help='discard PSA values at periods<Tmin',
+                    default=1e-5, type=float)
+parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                    help='verbose mode for debugging')
+args = parser.parse_args()
+modelname = args.model
 print('Plotting residuals vs. period for {0}'.format(modelname))
-if verbose:
-    print('Expecting to find {0} and {1} in current directory'.format(pdffile, sigmafile))
+
+if args.verbose:
+    print('Expecting to find {0} and {1} in cwd'.format(pdffile, sigmafile))
 
 ############################
 # Read input files
@@ -63,6 +67,7 @@ if verbose:
 # Separate PGA from PSA
 # and for PSA, convert T to log10(T) 
 # (use log(pd) bc hist2d does NOT look good if log-scaled after plotting)
+pdffile = modelname+'_PDF.out'
 f, T_orig, logres_orig, pdf_orig = np.loadtxt(pdffile, unpack=True)
 
 # PGA is at -1 so let's separate those from psa before we try to do log(T)
@@ -73,9 +78,9 @@ T_pga = T_orig[i_pga]
 logres_pga = logres_orig[i_pga]
 pdf_pga = pdf_orig[i_pga]
 
-i_psa, = np.where(T_orig!=-1) 
+#i_psa, = np.where(T_orig!=-1) 
 # actually, let's pick off unwanted short periods (0.0333 and 0.04 s)
-#i_psa, = np.where(T_orig>0.041) 
+i_psa, = np.where(T_orig>args.tmin) 
 
 # Define T, logres, and PDF for psa
 T = T_orig[i_psa]
@@ -90,9 +95,10 @@ lrs = np.unique(logres)
 
 ############################
 # Read mean, std of residuals, std of predictions from MODEL_sigma.out
+sigmafile = modelname+'_sigma.out'
 T_std, meanres, stdres, stdpred = np.loadtxt(sigmafile, unpack=True)
-#i_psa, = np.where(T_std>0.041) 
-i_psa, = np.where(T_std!=-1) 
+i_psa, = np.where(T_std>args.tmin) 
+#i_psa, = np.where(T_std!=-1) 
 T_std[0] = 0.000001
 T_std = np.log10(T_std)
 T_std[0] = -1
@@ -114,7 +120,7 @@ dx = np.append(dx, dx[-1])
 dx0 = dx[0]
 xbins = Ts + dx
 xbins = np.insert(xbins, 0, Ts[0]-dx0)
-if verbose:
+if args.verbose:
     print('xbins, len(xbins), len(Ts):')
     print(xbins, len(xbins), len(Ts))
 
@@ -157,22 +163,26 @@ gs_cb.update(left=0.85)
 # Need to set 'image' variable for drawing colorbar later
 # xedges and yedges should be identical to input xbins and ybins
 # Dan requested set max probability to 0.35
+cbaropts = {'cmap':'bone_r', 'vmax':'0.35'}
 
 # for PSA:
-counts, xedges, yedges, image = ax_logT.hist2d(T,logres, weights=pdf, bins=[xbins, ybins],cmap='bone_r', vmax=0.35, zorder=1)
+counts, xedges, yedges, image = ax_logT.hist2d(T,logres, weights=pdf, 
+                                               bins=[xbins, ybins],
+                                               **cbaropts, zorder=1)
 
 # for PGA:
-c2, x2, y2, im2 = ax_pga.hist2d(T_pga, logres_pga, weights=pdf_pga, bins=[[-2,0], ybins], cmap='bone_r', vmax=0.35)
+c2, x2, y2, im2 = ax_pga.hist2d(T_pga, logres_pga, weights=pdf_pga, 
+                                bins=[[-2,0], ybins], **cbaropts)
 
 #####
 # Plot line at zero to highlight positive vs negative residuals
 # new! use stroke (instead of plotting 2 lines)
 # not sure if this is any easier than just plotting 2 lines though :P
 stroke=[pe.Stroke(linewidth=3, foreground='w'), pe.Normal()]
-ax_logT.plot(ax_logT.get_xlim(),[0,0], lw=1, color='red',
-         path_effects=stroke, linestyle='--')
-ax_pga.plot(ax_pga.get_xlim(),[0,0], lw=1, color='red',
-         path_effects=stroke, linestyle='--')
+modstdstyle={'lw' : 1, 'color' : 'red', 'path_effects' : stroke, 
+             'linestyle' : '--'}
+ax_logT.plot(ax_logT.get_xlim(),[0,0], **modstdstyle)
+ax_pga.plot(ax_pga.get_xlim(),[0,0], **modstdstyle)
 
 #####
 # Add PGA label to PGA subplot
@@ -209,9 +219,12 @@ ax_pga.text(0.5, -0.02, 'PGA', ha='center', va='top',
 # mew = markeredgewidth (weight of edge stroke, other half of -W in GMT)
 # Set up line and marker styles
 stroke2=[pe.Stroke(linewidth=4, foreground='w'), pe.Normal()]
-lineeffects = {'lw':2, 'color':'black', 'path_effects':stroke2, 'alpha':0.7}
-lineeffects2 = {'lw':2, 'color':'r', 'path_effects':stroke, 'alpha':0.7, 'linestyle':'-'}
-avgmarker = {'marker':'o', 'ms':'10', 'mec':'k', 'mew':2, 'linestyle':'None'}
+lineeffects = {'lw':2, 'color':'black', 'path_effects':stroke2, 
+               'alpha':0.7}
+lineeffects2 = {'lw':2, 'color':'r', 'path_effects':stroke, 'alpha':0.7, 
+                'linestyle':'-'}
+avgmarker = {'marker':'o', 'ms':'10', 'mec':'k', 'mew':2, 
+             'linestyle':'None'}
 
 # Plot mean values for PSA and PGA
 ax_logT.plot(T_std_psa, meanres_psa, **avgmarker, mfc='white', alpha=0.3)
@@ -240,14 +253,14 @@ for i in range(len(avg_repeat)):
     std_minus[i] = avg_repeat[i]-std_repeat[i]
 #    ax_logT.plot(bin_repeat[i], std_plus[i], 'bx')
 #    ax_logT.plot(bin_repeat[i], std_minus[i], 'bx')
-if verbose:
+if args.verbose:
     print('len of xbins, meanres_psa, stdres_psa:')
     print(len(xbins), len(meanres_psa), len(stdres_psa))
     print('len of repeated xbins, repeated means, repeated stds:')
     print(len(bin_repeat), len(avg_repeat), len(std_repeat))
     print(T_std)
 
-
+# NOTE: need to implement check for whether list of T is given in increasing or decreasing order in sigma file
 #ax_logT.plot(bin_repeat[::-1], avg_repeat-std_repeat, **lineeffects, label='residual std', zorder=8)
 #ax_logT.plot(bin_repeat[::-1], avg_repeat+std_repeat, **lineeffects, zorder=8)
 ax_logT.plot(bin_repeat, std_plus, **lineeffects, label='residual std', zorder=8)
