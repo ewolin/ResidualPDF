@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 
 #import gmmpdfutils
+from gmmpdfutils import xbinedges
 
 ############################
 # Arguments and usage
@@ -111,24 +112,11 @@ stdpred_psa = stdpred[i_psa]
 
 ############################
 # Find bin edges for 2d histogram
-# len(xbins) = len(Ts) + 1 
-# len(ybins) = len(lrs) + 1 
-# first bin: pad on left/bottom by difference between 1st and 2nd pt
-# last bin: pad on right/top by difference from 2nd to last pt 
-dx = 0.5*np.diff(Ts)
-dx = np.append(dx, dx[-1])
-dx0 = dx[0]
-xbins = Ts + dx
-xbins = np.insert(xbins, 0, Ts[0]-dx0)
+xbins = xbinedges(Ts)
+ybins = xbinedges(lrs)
 if args.verbose:
     print('xbins, len(xbins), len(Ts):')
     print(xbins, len(xbins), len(Ts))
-
-dy = 0.5*np.diff(lrs)
-dy = np.append(dy, dy[-1])
-dy0 = dy[0]
-ybins = lrs + dy
-ybins = np.insert(ybins, 0, lrs[0]-dy0)
 
 ############################
 # Quick and dirty figure
@@ -260,18 +248,19 @@ if args.verbose:
     print(len(bin_repeat), len(avg_repeat), len(std_repeat))
     print(T_std)
 
-# NOTE: need to implement check for whether list of T is given in increasing or decreasing order in sigma file
-#ax_logT.plot(bin_repeat[::-1], avg_repeat-std_repeat, **lineeffects, label='residual std', zorder=8)
-#ax_logT.plot(bin_repeat[::-1], avg_repeat+std_repeat, **lineeffects, zorder=8)
+# Check whether list of T is given in increasing or decreasing order in sigma file
+# If listed in decreasing order, reverse the order of the bins for plotting
+if np.any(np.diff(T_std_psa)<0):
+    bin_repeat = bin_repeat[::-1]
+    
 ax_logT.plot(bin_repeat, std_plus, **lineeffects, label='residual std', zorder=8)
 ax_logT.plot(bin_repeat, std_minus, **lineeffects, zorder=8)
 
 # Now plot stds for model predictions...again repeat vals so we plot across the whole bin
-bin_repeat = np.repeat(xbins,3)[1:-1]
 std_repeat = np.append(np.repeat(stdpred_psa,3), stdpred_psa[-1])
 
-ax_logT.plot(bin_repeat[::-1], std_repeat, **lineeffects2, label='predicted std', zorder=3) 
-ax_logT.plot(bin_repeat[::-1], -1*std_repeat, **lineeffects2, zorder=3)
+ax_logT.plot(bin_repeat, std_repeat, **lineeffects2, label='predicted std', zorder=3) 
+ax_logT.plot(bin_repeat, -1*std_repeat, **lineeffects2, zorder=3)
 
 # Plot stds of residuals and model predictions for PGA
 ax_pga.plot([-2,0], np.repeat(meanres[0]+stdres[0], 2), **lineeffects) 
