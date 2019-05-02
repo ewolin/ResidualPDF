@@ -2,6 +2,9 @@
 *.swp
 .DS_Store
 
+# Directory full of old stuff we don't need anymore
+OldScripts
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
