@@ -5,7 +5,7 @@ Plot residuals of ground-motion models (GMMs) to visualize GMM performance with 
 ```bash
 conda env create -f env_respdf.yml
 ```
-The name of your new environment is defined by the first line ```name: ```, so you can edit this BEFORE create the environment, if you want to call it something different.  
+The name of your new environment is defined in the first line of the .yml file (```name: ```), so you can edit this BEFORE creating the environment, if you want to call it something different.  
 
 Activate the respdf environment with
 ```bash
