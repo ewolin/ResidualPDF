@@ -10,7 +10,14 @@ Then activate with
 ```bash
 conda activate respdf
 ```
-(the name of your environment is set by the first line ```name: ``` so you can edit this as you wish).  Remember, you will need to run the ```conda activate``` command every time you open a new terminal or tab!
+(the name of your environment is set by the first line ```name: ``` so you can edit this as you wish).  Remember, you will need to run the ```conda activate respdf``` command every time you open a new terminal or tab!
+
+NOTES: 
+* If you have an older version of conda you may need to use ```source activate respdf``` instead.
+* If you get an error message about Python not being installed as a framework, try modifying your ```matplotlibrc``` file to use a different backend.  If you don't have one, make one with 
+```bash
+echo "backend: TkAgg" > matplotlibrc
+```
 
 ## Residual PDF plots for individual ground motion models
 To make a residual PDF for the A10 ground motion model, with residuals stored in file A10_PDF.out and sigmas in A10_sigma.out in current working directory:
