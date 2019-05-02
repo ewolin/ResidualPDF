@@ -5,16 +5,17 @@ Plot residuals of ground-motion models (GMMs) to visualize GMM performance with 
 ```bash
 conda env create -f env_respdf.yml
 ```
+The name of your new environment is defined by the first line ```name: ```, so you can edit this BEFORE create the environment, if you want to call it something different.  
 
-Then activate with
+Activate the respdf environment with
 ```bash
 conda activate respdf
 ```
-(the name of your environment is set by the first line ```name: ``` so you can edit this as you wish).  Remember, you will need to run the ```conda activate respdf``` command every time you open a new terminal or tab!
+Remember, you will need to run the ```conda activate respdf``` command every time you open a new terminal or tab!
 
 NOTES: 
 * If you have an older version of conda you may need to use ```source activate respdf``` instead.
-* If you get an error message about Python not being installed as a framework, try modifying your ```matplotlibrc``` file to use a different backend.  If you don't have one, make one with 
+* If you get an error message about Python not being installed as a framework, try modifying your ```matplotlibrc``` file to use a different backend.  If you don't have one, you can create a very simple one one with 
 ```bash
 echo "backend: TkAgg" > matplotlibrc
 ```
