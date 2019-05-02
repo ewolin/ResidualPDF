@@ -70,7 +70,7 @@ x = np.linspace(-2,2,100)
 w_model = norm(loc=0, scale=stdpred/2)
 plt.plot(x,scale*w_model.pdf(x), label=modelname, color='r', lw=1)
 plt.plot(-1*stdpred,scale*w_model.pdf(-1*stdpred), **stdmarker, 
-         mec='r', label=r'Predicted 1$\sigma$')
+         mec='r')#, label=r'Predicted 1$\sigma$')
 plt.plot(stdpred,scale*w_model.pdf(stdpred), **stdmarker, mec='r')
 
 ############################
@@ -79,7 +79,7 @@ w_res = norm(loc=meanres, scale=stdres/2)
 
 plt.plot(x,scale*w_res.pdf(x), label='data', color='grey', lw=1)
 plt.plot(meanres-stdres,scale*w_res.pdf(meanres-stdres), 
-         **stdmarker, mec='grey', label=r'Residual 1$\sigma$')
+         **stdmarker, mec='grey')#, label=r'Residual 1$\sigma$')
 plt.plot(meanres+stdres,scale*w_res.pdf(meanres-stdres), 
          **stdmarker, mec='grey')
 plt.plot(meanres,scale*w_res.pdf(meanres), 

@@ -106,7 +106,9 @@ for i,mf in enumerate(meanfiles):
     modelname = mf.split('_')[0]
     sigmafile = modelname+'_sigma.out'
     T_std, meanres, stdres, stdpred = np.loadtxt(sigmafile, unpack=True)
-    i_psa, = np.where(T_std>0.041)
+    i_psa, = np.where(T_std > 1e-5)
+#    i_psa, = np.where(T_std>0.041)
+#    i_psa, = np.where((T_std > 1e-5) & (T_std != 0.075) & (T_std != 4.0) )
     meanres_psa = meanres[i_psa]
     meanavg = np.mean(meanres_psa)
 # try rms instead of mean residual:
@@ -141,7 +143,9 @@ for i,modelname in enumerate(newmods[::-1]):
     # should probably move reading input PSA vs PGA into a function
     sigmafile = modelname+'_sigma.out'
     T, meanres, stdres, stdpred = np.loadtxt(sigmafile, unpack=True)
-    i_psa, = np.where(T>0.041)
+    i_psa, = np.where(T > 1e-5)
+    #i_psa, = np.where(T>0.041)
+    #i_psa, = np.where((T > 1e-5) & (T != 0.075) & (T != 4.0 ))
     i_pga, = np.where(T==-1)
     T_psa = np.log10(T[i_psa])
     T_pga = T[i_pga]

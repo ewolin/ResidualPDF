@@ -82,6 +82,7 @@ pdf_pga = pdf_orig[i_pga]
 # use --tmin flag to ignore unwanted short periods 
 # e.g. 0.0333 and 0.04 s for Atkinson 2010 database
 i_psa, = np.where(T_orig>args.tmin) 
+#i_psa, = np.where((T_orig>args.tmin) & (T_orig != 0.075) & (T_orig != 4.0)) 
 
 # Define T, logres, and PDF for psa
 T = T_orig[i_psa]
@@ -96,10 +97,13 @@ lrs = np.unique(logres)
 ############################
 # Read mean, std of residuals, std of predictions from MODEL_sigma.out
 T_std, meanres, stdres, stdpred = np.loadtxt(sigmafile, unpack=True)
-i_psa, = np.where(T_std>args.tmin) 
+i_psa, = np.where(T_std>args.tmin)
+#i_psa, = np.where((T_std>args.tmin) & (T_std != 0.075) & (T_std != 4.0) )
 T_std[0] = 0.000001
 T_std = np.log10(T_std)
 T_std[0] = -1
+
+#stdpred = np.log10(np.exp(stdpred))
 
 T_std_psa = T_std[i_psa]
 meanres_psa = meanres[i_psa]
@@ -284,6 +288,8 @@ ax_logT.set_xlim(xbins[0], xbins[-1])
 
 ax_logT.set_ylim(-2,2)
 ax_pga.set_ylim(-2,2)
+#ax_logT.set_ylim(-10,10)
+#ax_pga.set_ylim(-10,10)
 
 #####
 # Draw colorbar 
@@ -304,8 +310,8 @@ ax_cb.set_visible(False)
 # convert -trim pdf.png meh.png
 #fig.savefig(modelname+'pdf.eps')
 #print('residual histogram saved to {0}pdf.eps'.format(modelname))
-#fig.savefig(modelname+'pdf.png')
-fig.savefig(modelname+'pdf.pdf')
+fig.savefig(modelname+'pdf.png')
+#fig.savefig(modelname+'pdf.pdf')
 print('residual histogram saved to {0}pdf.png'.format(modelname))
 #plt.show()
 
