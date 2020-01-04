@@ -37,6 +37,11 @@ from matplotlib import ticker
 
 from gmmpdfutils import xbinedges, setupLogTPlot
 
+# to use classic style:
+#import matplotlib.style
+#import matplotlib as mpl
+#mpl.style.use('classic')
+
 ############################
 # Input files
 meanfiles = glob('*_sigma.out')
@@ -104,12 +109,15 @@ markers = itertools.cycle(['o', 'v', 'd', 's', '^'])
 modelmeans = {}
 for i,mf in enumerate(meanfiles):
     modelname = mf.split('_')[0]
+    print(modelname)
     sigmafile = modelname+'_sigma.out'
     T_std, meanres, stdres, stdpred = np.loadtxt(sigmafile, unpack=True)
     i_psa, = np.where(T_std > 1e-5)
 #    i_psa, = np.where(T_std>0.041)
 #    i_psa, = np.where((T_std > 1e-5) & (T_std != 0.075) & (T_std != 4.0) )
+    print(i_psa)
     meanres_psa = meanres[i_psa]
+    print(meanres[i_psa])
     meanavg = np.mean(meanres_psa)
 # try rms instead of mean residual:
 #    meanavg = np.sqrt(np.mean(meanres_psa*meanres_psa))
@@ -189,7 +197,7 @@ for i,modelname in enumerate(newmods[::-1]):
     try:
         llhfile = modelname+'_LLH.out'
         T_llh, llh = np.loadtxt(llhfile, unpack=True)
-        i_psa_llh, = np.where(T_llh>0.041)
+#        i_psa_llh, = np.where(T_llh>0.041)
         i_pga_llh, = np.where(T_llh==-1)
         T_psa_llh = np.log10(T[i_psa_llh])
         T_pga_llh = T[i_pga_llh]
@@ -340,14 +348,14 @@ cb.update_ticks()
 # Save figures
 print('saving figures...')
 fig_heat.savefig('resmeans_heat.png')
-fig_heat.savefig('resmeans_heat.eps')
+#fig_heat.savefig('resmeans_heat.eps')
 fig_lines.savefig('resmeans_lines.png')
-fig_lines.savefig('resmeans_lines.eps')
+#fig_lines.savefig('resmeans_lines.eps')
 fig_smt.savefig('resmeans_smt.png')
-fig_smt.savefig('resmeans_smt.eps')
+#fig_smt.savefig('resmeans_smt.eps')
 fig_smv.savefig('resmeans_smv.png')
-fig_smv.savefig('resmeans_smv.eps')
+#fig_smv.savefig('resmeans_smv.eps')
 fig_llh.savefig('resmeans_llh.png')
-fig_llh.savefig('resmeans_llh.eps')
+#fig_llh.savefig('resmeans_llh.eps')
 print('done')
 #plt.show()

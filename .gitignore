@@ -109,3 +109,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+resmeans_fixlegend.py
+respdf2.py
+TestPatch/resmeans.py
+TestPatch/patch_resmeans.txt
+patch_resmeans.txt

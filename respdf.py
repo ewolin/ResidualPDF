@@ -299,8 +299,8 @@ ax_pga.set_ylim(-2,2)
 
 # Turn off colorbar by commenting out line below 
 # and uncommenting set_visible command
-#fig.colorbar(image, cax=ax_cb, label='Probability')
-ax_cb.set_visible(False)
+fig.colorbar(image, cax=ax_cb, label='Probability')
+#ax_cb.set_visible(False)
 
 #####
 # Finish up and save

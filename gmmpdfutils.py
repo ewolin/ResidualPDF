@@ -25,7 +25,7 @@ def setupLogTPlot(Tlim=[0.04, 5.5], ylim=[-2,2], ylabel='ylabel'):
     ax_psa = fig.add_subplot(gs_plots[0,1])
     
     ax_psa.yaxis.set_ticks_position('both')
-    ax_psa.tick_params(axis='y', labelleft='off')
+    ax_psa.tick_params(axis='y', labelleft=False)
 
     ax_pga.xaxis.set_visible(False)
     ax_pga.text(0.5, -0.02, 'PGA', ha='center', va='top', 
