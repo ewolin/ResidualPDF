@@ -15,7 +15,7 @@ Remember, you will need to run the ```conda activate respdf``` command every tim
 
 NOTES: 
 * If you have an older version of conda you may need to use ```source activate respdf``` instead.
-* If you get an error message about Python not being installed as a framework, try modifying your ```matplotlibrc``` file to use a different backend.  If you don't have one, you can create a very simple one one with 
+* If you get an error message about Python not being installed as a framework, try modifying your ```matplotlibrc``` file to use a different backend.  If you don't have one, you can create a very simple one with 
 ```bash
 echo "backend: TkAgg" > matplotlibrc
 ```
